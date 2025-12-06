@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from api import views
 
 router = DefaultRouter()
+router.register(r"users", views.UserViewSet, basename="user")
 router.register(r"recipes", views.RecipeViewSet, basename="recipe")
 router.register(r"tags", views.TagViewSet, basename="tag")
 router.register(r"ingredients", views.IngredientViewSet, basename="ingredient")

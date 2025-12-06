@@ -15,6 +15,14 @@ from recipes.models import (
 from users.models import Subscription, User
 
 
+class RecipeShortForAuthorSerializer(serializers.ModelSerializer):
+    """Краткий сериализатор рецепта для отображения в профиле автора."""
+
+    class Meta:
+        model = Recipe
+        fields = ("id", "name", "image", "cooking_time")
+
+
 class CustomUserSerializer(UserSerializer):
     """Расширенный сериализатор пользователя с информацией о подписке."""
 
@@ -41,6 +49,39 @@ class CustomUserSerializer(UserSerializer):
 
         # Проверяем наличие записи в модели Subscription
         return Subscription.objects.filter(user=request.user, author=obj).exists()
+
+
+class AuthorSubscriptionSerializer(CustomUserSerializer):
+    """Сериализатор автора для отображения в списке подписок с его рецептами."""
+
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta(CustomUserSerializer.Meta):
+        fields = CustomUserSerializer.Meta.fields + ("recipes_count", "recipes")
+
+    def get_recipes(self, obj):
+        """Возвращает рецепты автора, ограниченные параметром recipes_limit."""
+        request = self.context.get("request")
+        recipes_limit = None
+
+        if request:
+            recipes_limit = request.query_params.get("recipes_limit")
+
+        recipes = Recipe.objects.filter(author=obj)
+
+        if recipes_limit:
+            try:
+                recipes_limit = int(recipes_limit)
+                recipes = recipes[:recipes_limit]
+            except (ValueError, TypeError):
+                pass
+
+        return RecipeShortForAuthorSerializer(recipes, many=True).data
+
+    def get_recipes_count(self, obj):
+        """Возвращает количество рецептов автора."""
+        return Recipe.objects.filter(author=obj).count()
 
 
 class TagSerializer(serializers.ModelSerializer):
