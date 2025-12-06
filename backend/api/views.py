@@ -1,3 +1,5 @@
+from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
@@ -5,7 +7,14 @@ from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag,
+)
 
 from api.filters import IngredientFilter, RecipeFilter
 from api.serializers import (
@@ -71,6 +80,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         """Использует RecipeReadSerializer для GET, RecipeWriteSerializer для других методов."""
+        if self.request.method in permissions.SAFE_METHODS:
+            return RecipeReadSerializer
+        return RecipeWriteSerializer
 
     def perform_create(self, serializer):
         """Автоматически устанавливает текущего пользователя как автора."""
@@ -128,6 +140,35 @@ class RecipeViewSet(viewsets.ModelViewSet):
             shopping_cart.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def perform_create(self, serializer):
-        """Автоматически устанавливает текущего пользователя как автора."""
-        serializer.save(author=self.request.user)
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def download_shopping_cart(self, request):
+        """Скачать список покупок в виде текстового файла."""
+        # Получаем все ингредиенты из рецептов в корзине пользователя
+        ingredients = (
+            RecipeIngredient.objects.filter(recipe__shoppingcart__user=request.user)
+            .values("ingredient__name", "ingredient__measurement_unit")
+            .annotate(amount=Sum("amount"))
+            .order_by("ingredient__name")
+        )
+
+        # Формируем текстовый контент
+        lines = ["Список покупок:", "=" * 40]
+        if not ingredients:
+            lines.append("Корзина пуста!")
+        else:
+            for item in ingredients:
+                name = item["ingredient__name"]
+                amount = item["amount"]
+                unit = item["ingredient__measurement_unit"]
+                lines.append(f"• {name}: {amount} {unit}")
+
+        txt_content = "\n".join(lines)
+
+        # Возвращаем файл
+        response = HttpResponse(txt_content, content_type="text/plain; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="shopping_cart.txt"'
+        return response
