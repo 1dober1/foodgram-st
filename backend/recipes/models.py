@@ -53,3 +53,27 @@ class RecipeIngredient(models.Model):
                 fields=["recipe", "ingredient"], name="unique_recipe_ingredient"
             )
         ]
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "recipe"], name="unique_user_recipe_favorite"
+            )
+        ]
+
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "recipe"], name="unique_user_recipe_shopping_cart"
+            )
+        ]
