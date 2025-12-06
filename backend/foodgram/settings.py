@@ -145,3 +145,19 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 6,
 }
+
+# Djoser configuration
+DJOSER = {
+    "USER_ID_FIELD": "id",
+    "LOGIN_FIELD": "email",
+    "SERIALIZERS": {
+        "user": "api.serializers.CustomUserSerializer",
+        "user_create": "api.serializers.UserCreateSerializer",
+        "current_user": "api.serializers.CustomUserSerializer",
+    },
+    "PERMISSIONS": {
+        "user": ["rest_framework.permissions.IsAuthenticated"],
+        "user_list": ["rest_framework.permissions.AllowAny"],
+        "user_create": ["rest_framework.permissions.AllowAny"],
+    },
+}

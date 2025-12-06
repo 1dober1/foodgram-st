@@ -1,7 +1,10 @@
 from base64 import b64decode
 
 from django.core.files.base import ContentFile
-from djoser.serializers import UserSerializer
+from djoser.serializers import (
+    UserSerializer,
+    UserCreateSerializer as DjoserUserCreateSerializer,
+)
 from rest_framework import serializers
 
 from recipes.models import (
@@ -13,6 +16,13 @@ from recipes.models import (
     Tag,
 )
 from users.models import Subscription, User
+
+
+class UserCreateSerializer(DjoserUserCreateSerializer):
+    """Сериализатор для создания пользователя с обязательными полями."""
+
+    class Meta(DjoserUserCreateSerializer.Meta):
+        fields = ("email", "username", "first_name", "last_name", "password")
 
 
 class RecipeShortForAuthorSerializer(serializers.ModelSerializer):
@@ -27,6 +37,8 @@ class CustomUserSerializer(UserSerializer):
     """Расширенный сериализатор пользователя с информацией о подписке."""
 
     is_subscribed = serializers.SerializerMethodField()
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
 
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + ("is_subscribed",)
