@@ -2,6 +2,7 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -176,12 +177,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return response
 
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet для управления пользователями и подписками."""
+class UserViewSet(DjoserUserViewSet):
+    """ViewSet для управления пользователями и подписками.
 
-    queryset = User.objects.all()
-    serializer_class = AuthorSubscriptionSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    Наследуется от DjoserUserViewSet для поддержки стандартных операций
+    (регистрация, активация, получение профиля), расширен методами подписок.
+    """
+
     pagination_class = RecipePageNumberPagination
 
     @action(
@@ -189,9 +191,9 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         methods=["post", "delete"],
         permission_classes=[permissions.IsAuthenticated],
     )
-    def subscribe(self, request, pk=None):
+    def subscribe(self, request, id=None):
         """Создать или удалить подписку на пользователя."""
-        author = get_object_or_404(User, pk=pk)
+        author = get_object_or_404(User, id=id)
         user = request.user
 
         if user == author:
