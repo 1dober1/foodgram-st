@@ -115,6 +115,14 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
 
 
+class RecipeShortSerializer(serializers.ModelSerializer):
+    """Краткий сериализатор рецепта для ответов action'ов (избранное, корзина)."""
+
+    class Meta:
+        model = Recipe
+        fields = ("id", "name", "image", "cooking_time")
+
+
 class Base64ImageField(serializers.ImageField):
     """Поле для кодирования/декодирования изображений в формате Base64."""
 

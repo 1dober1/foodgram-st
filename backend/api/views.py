@@ -1,13 +1,17 @@
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
 
-from recipes.models import Ingredient, Recipe, Tag
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 
 from api.filters import IngredientFilter, RecipeFilter
 from api.serializers import (
     IngredientSerializer,
     RecipeReadSerializer,
+    RecipeShortSerializer,
     RecipeWriteSerializer,
     TagSerializer,
 )
@@ -67,9 +71,62 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         """Использует RecipeReadSerializer для GET, RecipeWriteSerializer для других методов."""
-        if self.request.method in permissions.SAFE_METHODS:
-            return RecipeReadSerializer
-        return RecipeWriteSerializer
+
+    def perform_create(self, serializer):
+        """Автоматически устанавливает текущего пользователя как автора."""
+        serializer.save(author=self.request.user)
+
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def favorite(self, request, pk=None):
+        """Добавить/удалить рецепт в избранное."""
+        recipe = get_object_or_404(Recipe, pk=pk)
+        user = request.user
+
+        if request.method == "POST":
+            favorite, created = Favorite.objects.get_or_create(user=user, recipe=recipe)
+            if not created:
+                return Response(
+                    {"detail": "Рецепт уже в избранном"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serializer = RecipeShortSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        elif request.method == "DELETE":
+            favorite = get_object_or_404(Favorite, user=user, recipe=recipe)
+            favorite.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def shopping_cart(self, request, pk=None):
+        """Добавить/удалить рецепт в корзину покупок."""
+        recipe = get_object_or_404(Recipe, pk=pk)
+        user = request.user
+
+        if request.method == "POST":
+            shopping_cart, created = ShoppingCart.objects.get_or_create(
+                user=user, recipe=recipe
+            )
+            if not created:
+                return Response(
+                    {"detail": "Рецепт уже в корзине"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serializer = RecipeShortSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        elif request.method == "DELETE":
+            shopping_cart = get_object_or_404(ShoppingCart, user=user, recipe=recipe)
+            shopping_cart.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, serializer):
         """Автоматически устанавливает текущего пользователя как автора."""
