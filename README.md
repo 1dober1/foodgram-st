@@ -52,22 +52,12 @@ DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 docker-compose up -d
 ```
 
-### 4. Выполнение миграций и сбор статики
+При первом запуске автоматически выполняются:
+- Миграции базы данных
+- Сбор статических файлов
+- Загрузка ингредиентов
 
-После запуска контейнеров выполните:
-
-```bash
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py collectstatic --noinput
-```
-
-### 5. Загрузка ингредиентов
-
-```bash
-docker-compose exec backend python manage.py load_ingredients
-```
-
-### 6. Создание суперпользователя
+### 4. Создание суперпользователя
 
 ```bash
 docker-compose exec backend python manage.py createsuperuser
