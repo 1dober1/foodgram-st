@@ -18,7 +18,8 @@ class Tag(models.Model):
         max_length=7,
         validators=[
             RegexValidator(
-                r"^#[0-9a-fA-F]{6}$", "Цвет должен быть в формате HEX (#ffffff)"
+                r"^#[0-9a-fA-F]{6}$",
+                "Цвет должен быть в формате HEX (#ffffff)"
             )
         ],
     )
@@ -33,9 +34,13 @@ class Recipe(models.Model):
     name = models.CharField(max_length=200)
     image = models.ImageField(upload_to="recipes/")
     text = models.TextField()
-    cooking_time = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+    cooking_time = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)]
+    )
     tags = models.ManyToManyField(Tag)
-    ingredients = models.ManyToManyField(Ingredient, through="RecipeIngredient")
+    ingredients = models.ManyToManyField(
+        Ingredient, through="RecipeIngredient"
+    )
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -45,12 +50,15 @@ class Recipe(models.Model):
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    amount = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+    amount = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)]
+    )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["recipe", "ingredient"], name="unique_recipe_ingredient"
+                fields=["recipe", "ingredient"],
+                name="unique_recipe_ingredient"
             )
         ]
 
@@ -74,6 +82,7 @@ class ShoppingCart(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "recipe"], name="unique_user_recipe_shopping_cart"
+                fields=["user", "recipe"],
+                name="unique_user_recipe_shopping_cart"
             )
         ]
