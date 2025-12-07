@@ -20,19 +20,33 @@ class Command(BaseCommand):
             choices=["json", "csv"],
             help="Формат файла (json или csv)",
         )
+        parser.add_argument(
+            "--path",
+            type=str,
+            default=None,
+            help="Путь к файлу с ингредиентами",
+        )
 
     def handle(self, *args, **options):
         file_format = options["format"]
+        custom_path = options.get("path")
 
-        # Определяем путь к файлу
-        base_path = Path(__file__).resolve().parent.parent.parent.parent.parent
-
-        if file_format == "json":
-            file_path = base_path / "data" / "ingredients.json"
-            self.load_from_json(file_path)
+        if custom_path:
+            file_path = Path(custom_path)
+            if file_path.suffix == ".csv":
+                self.load_from_csv(file_path)
+            else:
+                self.load_from_json(file_path)
         else:
-            file_path = base_path / "data" / "ingredients.csv"
-            self.load_from_csv(file_path)
+            # Определяем путь к файлу
+            base_path = Path(__file__).resolve().parent.parent.parent.parent.parent
+
+            if file_format == "json":
+                file_path = base_path / "data" / "ingredients.json"
+                self.load_from_json(file_path)
+            else:
+                file_path = base_path / "data" / "ingredients.csv"
+                self.load_from_csv(file_path)
 
     def load_from_json(self, file_path):
         """Загружает ингредиенты из JSON файла"""
