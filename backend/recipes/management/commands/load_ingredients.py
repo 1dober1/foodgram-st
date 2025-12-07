@@ -8,9 +8,7 @@ from recipes.models import Ingredient
 
 
 class Command(BaseCommand):
-    help = (
-        "Загружает ингредиенты из файла data/ingredients.json или data/ingredients.csv"
-    )
+    help = "Загружает ингредиенты из файла data/ingredients.json или .csv"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -39,13 +37,13 @@ class Command(BaseCommand):
                 self.load_from_json(file_path)
         else:
             # Определяем путь к файлу
-            base_path = Path(__file__).resolve().parent.parent.parent.parent.parent
+            base = Path(__file__).resolve().parent.parent.parent.parent.parent
 
             if file_format == "json":
-                file_path = base_path / "data" / "ingredients.json"
+                file_path = base / "data" / "ingredients.json"
                 self.load_from_json(file_path)
             else:
-                file_path = base_path / "data" / "ingredients.csv"
+                file_path = base / "data" / "ingredients.csv"
                 self.load_from_csv(file_path)
 
     def load_from_json(self, file_path):
@@ -70,13 +68,11 @@ class Command(BaseCommand):
             # Используем bulk_create для быстрой загрузки
             Ingredient.objects.bulk_create(ingredients, batch_size=1000)
 
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"✓ Успешно загружено {len(ingredients)} ингредиентов из JSON"
-                )
-            )
+            msg = f"✓ Загружено {len(ingredients)} ингредиентов из JSON"
+            self.stdout.write(self.style.SUCCESS(msg))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Ошибка при загрузке JSON: {str(e)}"))
+            msg = f"Ошибка при загрузке JSON: {str(e)}"
+            self.stdout.write(self.style.ERROR(msg))
 
     def load_from_csv(self, file_path):
         """Загружает ингредиенты из CSV файла"""
@@ -101,10 +97,8 @@ class Command(BaseCommand):
             # Используем bulk_create для быстрой загрузки
             Ingredient.objects.bulk_create(ingredients, batch_size=1000)
 
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"✓ Успешно загружено {len(ingredients)} ингредиентов из CSV"
-                )
-            )
+            msg = f"✓ Загружено {len(ingredients)} ингредиентов из CSV"
+            self.stdout.write(self.style.SUCCESS(msg))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Ошибка при загрузке CSV: {str(e)}"))
+            msg = f"Ошибка при загрузке CSV: {str(e)}"
+            self.stdout.write(self.style.ERROR(msg))

@@ -15,7 +15,7 @@ from recipes.models import (
     ShoppingCart,
     Tag,
 )
-from users.models import Subscription, User
+from users.models import Subscription
 
 
 class UserCreateSerializer(DjoserUserCreateSerializer):
@@ -83,7 +83,7 @@ class CustomUserSerializer(UserSerializer):
 
 
 class AuthorSubscriptionSerializer(CustomUserSerializer):
-    """Сериализатор автора для отображения в списке подписок с его рецептами."""
+    """Сериализатор автора для списка подписок с рецептами."""
 
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
@@ -186,7 +186,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
-    """Краткий сериализатор рецепта для ответов action'ов (избранное, корзина)."""
+    """Краткий сериализатор рецепта для action'ов (избранное, корзина)."""
 
     class Meta:
         model = Recipe

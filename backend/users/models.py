@@ -23,7 +23,9 @@ class User(AbstractUser):
 
 
 class Subscription(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="subscriber")
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="subscriber"
+    )
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="subscribing"
     )
@@ -31,7 +33,8 @@ class Subscription(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "author"], name="unique_user_author_subscription"
+                fields=["user", "author"],
+                name="unique_user_author_subscription"
             ),
             models.CheckConstraint(
                 check=~models.Q(user=models.F("author")),

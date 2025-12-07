@@ -90,7 +90,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
     def get_serializer_class(self):
-        """Использует RecipeReadSerializer для GET, RecipeWriteSerializer для других методов."""
+        """Возвращает нужный сериализатор в зависимости от метода."""
         if self.request.method in permissions.SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeWriteSerializer
@@ -113,7 +113,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         # Проверяем права доступа
-        if not IsAuthorOrReadOnly().has_object_permission(request, self, instance):
+        perm = IsAuthorOrReadOnly()
+        if not perm.has_object_permission(request, self, instance):
             return Response(
                 {"detail": "У вас нет прав для выполнения данного действия."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -128,7 +129,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Удаление рецепта с проверкой прав доступа."""
         instance = self.get_object()
         # Проверяем права доступа
-        if not IsAuthorOrReadOnly().has_object_permission(request, self, instance):
+        perm = IsAuthorOrReadOnly()
+        if not perm.has_object_permission(request, self, instance):
             return Response(
                 {"detail": "У вас нет прав для выполнения данного действия."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -143,7 +145,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path="get-link",
     )
     def get_link(self, request, pk=None):
-        """Возвращает короткую ссылку на рецепт (используем обычную ссылку как заглушку)."""
+        """Возвращает короткую ссылку на рецепт."""
         try:
             pk = int(pk)
         except (ValueError, TypeError):
@@ -241,8 +243,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         """Скачать список покупок в виде текстового файла."""
         # Получаем все ингредиенты из рецептов в корзине пользователя
+        user = request.user
         ingredients = (
-            RecipeIngredient.objects.filter(recipe__shoppingcart__user=request.user)
+            RecipeIngredient.objects.filter(recipe__shoppingcart__user=user)
             .values("ingredient__name", "ingredient__measurement_unit")
             .annotate(amount=Sum("amount"))
             .order_by("ingredient__name")
