@@ -22,6 +22,8 @@ from api.filters import IngredientFilter, RecipeFilter
 from api.serializers import (
     AuthorSubscriptionSerializer,
     IngredientSerializer,
+    AvatarSerializer,
+    CustomUserSerializer,
     RecipeReadSerializer,
     RecipeShortSerializer,
     RecipeWriteSerializer,
@@ -45,7 +47,7 @@ class RecipePageNumberPagination(PageNumberPagination):
     """Пагинатор для рецептов."""
 
     page_size = 6
-    page_size_query_param = "page_size"
+    page_size_query_param = "limit"
     max_page_size = 100
 
 
@@ -66,11 +68,17 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
 
+    def retrieve(self, request, *args, **kwargs):
+        """Получение ингредиента по ID с проверкой существования."""
+        instance = get_object_or_404(Ingredient, pk=kwargs.get("pk"))
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """ViewSet для рецептов с фильтрацией, пагинацией и управлением."""
 
-    permission_classes = (IsAuthorOrReadOnly,)
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     pagination_class = RecipePageNumberPagination
@@ -91,6 +99,62 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Автоматически устанавливает текущего пользователя как автора."""
         serializer.save(author=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        recipe = serializer.save()
+        read_serializer = RecipeReadSerializer(recipe, context={"request": request})
+        headers = self.get_success_headers(read_serializer.data)
+        return Response(
+            read_serializer.data, status=status.HTTP_201_CREATED, headers=headers
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        # Проверяем права доступа
+        if not IsAuthorOrReadOnly().has_object_permission(request, self, instance):
+            return Response(
+                {"detail": "У вас нет прав для выполнения данного действия."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        recipe = serializer.save()
+        read_serializer = RecipeReadSerializer(recipe, context={"request": request})
+        return Response(read_serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        """Удаление рецепта с проверкой прав доступа."""
+        instance = self.get_object()
+        # Проверяем права доступа
+        if not IsAuthorOrReadOnly().has_object_permission(request, self, instance):
+            return Response(
+                {"detail": "У вас нет прав для выполнения данного действия."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        permission_classes=[permissions.AllowAny],
+        url_path="get-link",
+    )
+    def get_link(self, request, pk=None):
+        """Возвращает короткую ссылку на рецепт (используем обычную ссылку как заглушку)."""
+        try:
+            pk = int(pk)
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": "Invalid recipe ID."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        recipe = get_object_or_404(Recipe, pk=pk)
+        recipe_url = request.build_absolute_uri(f"/api/recipes/{recipe.pk}/")
+        return Response({"short-link": recipe_url}, status=status.HTTP_200_OK)
+
     @action(
         detail=True,
         methods=["post", "delete"],
@@ -98,6 +162,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, pk=None):
         """Добавить/удалить рецепт в избранное."""
+        try:
+            pk = int(pk)
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": "Invalid recipe ID."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
 
@@ -112,7 +183,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         elif request.method == "DELETE":
-            favorite = get_object_or_404(Favorite, user=user, recipe=recipe)
+            try:
+                favorite = Favorite.objects.get(user=user, recipe=recipe)
+            except Favorite.DoesNotExist:
+                return Response(
+                    {"detail": "Рецепт не найден в избранном"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -123,6 +200,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def shopping_cart(self, request, pk=None):
         """Добавить/удалить рецепт в корзину покупок."""
+        try:
+            pk = int(pk)
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": "Invalid recipe ID."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
 
@@ -139,7 +223,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         elif request.method == "DELETE":
-            shopping_cart = get_object_or_404(ShoppingCart, user=user, recipe=recipe)
+            try:
+                shopping_cart = ShoppingCart.objects.get(user=user, recipe=recipe)
+            except ShoppingCart.DoesNotExist:
+                return Response(
+                    {"detail": "Рецепт не найден в корзине"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             shopping_cart.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -187,6 +277,16 @@ class UserViewSet(DjoserUserViewSet):
     pagination_class = RecipePageNumberPagination
 
     @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def me(self, request):
+        """Получить информацию о текущем пользователе."""
+        serializer = CustomUserSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
+
+    @action(
         detail=True,
         methods=["post", "delete"],
         permission_classes=[permissions.IsAuthenticated],
@@ -217,7 +317,13 @@ class UserViewSet(DjoserUserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         elif request.method == "DELETE":
-            subscription = get_object_or_404(Subscription, user=user, author=author)
+            try:
+                subscription = Subscription.objects.get(user=user, author=author)
+            except Subscription.DoesNotExist:
+                return Response(
+                    {"detail": "Вы не подписаны на этого пользователя"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -244,3 +350,31 @@ class UserViewSet(DjoserUserViewSet):
             subscriptions, many=True, context={"request": request}
         )
         return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=["put", "delete"],
+        url_path="me/avatar",
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def set_avatar(self, request):
+        """Загрузка или удаление аватара пользователя."""
+        user = request.user
+
+        if request.method == "PUT":
+            serializer = AvatarSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user.avatar = serializer.validated_data["avatar"]
+            user.save()
+            # Возвращаем только поле avatar согласно требованиям тестов
+            avatar_url = user.avatar.url if user.avatar else None
+            if avatar_url and not avatar_url.startswith("http"):
+                avatar_url = request.build_absolute_uri(avatar_url)
+            return Response({"avatar": avatar_url}, status=status.HTTP_200_OK)
+
+        # DELETE
+        if user.avatar:
+            user.avatar.delete(save=False)
+            user.avatar = None
+            user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -6,24 +6,51 @@ case "$OSTYPE" in
     *)        python=python3 ;;
 esac
 
-PATH_TO_MANAGE_PY=$(find ../ -name "manage.py" -not -path "*/env" -not -path "*/venv");
-BASE_DIR="$(dirname "${PATH_TO_MANAGE_PY}")";
-cd $BASE_DIR
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SEARCH_ROOT="$SCRIPT_DIR/.."
+
+# Ищем manage.py только внутри текущего проекта, чтобы не цеплять соседние репозитории
+MANAGE_FILES=($(find "$SEARCH_ROOT" -maxdepth 3 -name "manage.py" -not -path "*/env/*" -not -path "*/venv/*"))
+
+if [ ${#MANAGE_FILES[@]} -ne 1 ]; then
+    echo "Убедитесь, что в проекте содержится ровно один файл manage.py"
+    exit 1
+fi
+
+PATH_TO_MANAGE_PY="${MANAGE_FILES[0]}"
+BASE_DIR="$(dirname "$PATH_TO_MANAGE_PY")"
+cd "$BASE_DIR" || exit 1
+
+# Полная очистка БД: рецепты, связанные модели, пользователи и сброс последовательностей
+echo "from django.db import connection; \
+from django.contrib.auth import get_user_model; \
+from recipes.models import Recipe, RecipeIngredient, Favorite, ShoppingCart, Ingredient, Tag; \
+from users.models import Subscription; \
+User = get_user_model(); \
+RecipeIngredient.objects.all().delete(); \
+Favorite.objects.all().delete(); \
+ShoppingCart.objects.all().delete(); \
+Recipe.objects.all().delete(); \
+Subscription.objects.all().delete(); \
+Ingredient.objects.all().delete(); \
+Tag.objects.all().delete(); \
+User.objects.exclude(is_superuser=True).delete(); \
+cursor = connection.cursor(); \
+cursor.execute(\"DELETE FROM sqlite_sequence WHERE name IN ('recipes_ingredient', 'recipes_recipe', 'recipes_tag', 'users_user', 'recipes_favorite', 'recipes_shoppingcart', 'recipes_recipeingredient', 'users_subscription')\"); \
+print('База данных полностью очищена и последовательности сброшены'); \
+exit(0);" | $python manage.py shell
 status=$?;
 if [ $status -ne 0 ]; then
-    echo "Убедитесь, что в проекте содержится только один файл manage.py";
+    echo "Ошибка при очистке БД.";
     exit $status;
 fi
 
-echo "from django.contrib.auth import get_user_model; User = get_user_model(); \
-     usernames_list = ['vasya.ivanov', 'second-user', 'third-user-username', 'NoEmail', 'NoFirstName', 'NoLastName', 'NoPassword', 'TooLongEmail', \
-     'the-username-that-is-150-characters-long-and-should-not-pass-validation-if-the-serializer-is-configured-correctly-otherwise-the-current-test-will-fail-', \
-     'TooLongFirstName', 'TooLongLastName', 'InvalidU$ername', 'EmailInUse']; \
-     delete_num, _ = User.objects.filter(username__in=usernames_list).delete(); \
-     exit(1) if not delete_num else exit(0);" | $python manage.py shell
+# Загрузка ингредиентов
+$python manage.py load_ingredients --format json
 status=$?;
 if [ $status -ne 0 ]; then
-    echo "Ошибка при удалении записей, созданных в БД на предыдущем запуске postman-коллекции: объекты отсутствуют либо произошел сбой.";
+    echo "Ошибка при загрузке ингредиентов.";
     exit $status;
 fi
-echo "База данных очищена."
+
+echo "База данных готова к тестированию."

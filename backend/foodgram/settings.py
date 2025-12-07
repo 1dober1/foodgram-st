@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-4x$0isx!pj!$y@prlic_qh&r0dc(s#b8j@j^9q_t$89ppoe5@k
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -125,6 +125,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = "/static/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
@@ -150,13 +152,14 @@ REST_FRAMEWORK = {
 DJOSER = {
     "USER_ID_FIELD": "id",
     "LOGIN_FIELD": "email",
+    "USER_CREATE_PASSWORD_RETYPE": False,
     "SERIALIZERS": {
         "user": "api.serializers.CustomUserSerializer",
         "user_create": "api.serializers.UserCreateSerializer",
         "current_user": "api.serializers.CustomUserSerializer",
     },
     "PERMISSIONS": {
-        "user": ["rest_framework.permissions.IsAuthenticated"],
+        "user": ["rest_framework.permissions.AllowAny"],
         "user_list": ["rest_framework.permissions.AllowAny"],
         "user_create": ["rest_framework.permissions.AllowAny"],
     },
