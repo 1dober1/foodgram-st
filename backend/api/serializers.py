@@ -79,7 +79,9 @@ class CustomUserSerializer(UserSerializer):
             return False
 
         # Проверяем наличие записи в модели Subscription
-        return Subscription.objects.filter(user=request.user, author=obj).exists()
+        return Subscription.objects.filter(
+            user=request.user, author=obj
+        ).exists()
 
 
 class AuthorSubscriptionSerializer(CustomUserSerializer):
@@ -89,7 +91,9 @@ class AuthorSubscriptionSerializer(CustomUserSerializer):
     recipes_count = serializers.SerializerMethodField()
 
     class Meta(CustomUserSerializer.Meta):
-        fields = CustomUserSerializer.Meta.fields + ("recipes_count", "recipes")
+        fields = (
+            CustomUserSerializer.Meta.fields + ("recipes_count", "recipes")
+        )
 
     def get_recipes(self, obj):
         """Возвращает рецепты автора, ограниченные параметром recipes_limit."""
@@ -136,7 +140,9 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
     id = serializers.IntegerField(source="ingredient.id")
     name = serializers.CharField(source="ingredient.name")
-    measurement_unit = serializers.CharField(source="ingredient.measurement_unit")
+    measurement_unit = serializers.CharField(
+        source="ingredient.measurement_unit"
+    )
     amount = serializers.IntegerField()
 
     class Meta:
@@ -148,7 +154,9 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения рецептов."""
 
     author = CustomUserSerializer()
-    ingredients = RecipeIngredientSerializer(source="recipeingredient_set", many=True)
+    ingredients = RecipeIngredientSerializer(
+        source="recipeingredient_set", many=True
+    )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -182,7 +190,9 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
 
-        return ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
+        return ShoppingCart.objects.filter(
+            user=request.user, recipe=obj
+        ).exists()
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
@@ -231,17 +241,25 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ("ingredients", "tags", "image", "name", "text", "cooking_time")
+        fields = (
+            "ingredients", "tags", "image", "name", "text", "cooking_time"
+        )
 
     def validate_ingredients(self, value):
         if not value:
-            raise serializers.ValidationError("Нужно указать хотя бы один ингредиент.")
+            raise serializers.ValidationError(
+                "Нужно указать хотя бы один ингредиент."
+            )
         ids = [item["id"] for item in value]
         if len(ids) != len(set(ids)):
-            raise serializers.ValidationError("Ингредиенты не должны повторяться.")
+            raise serializers.ValidationError(
+                "Ингредиенты не должны повторяться."
+            )
         for item in value:
             if not Ingredient.objects.filter(id=item["id"]).exists():
-                raise serializers.ValidationError("Указан несуществующий ингредиент.")
+                raise serializers.ValidationError(
+                    "Указан несуществующий ингредиент."
+                )
         return value
 
     def validate_tags(self, value):
@@ -258,7 +276,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
         # For updates (PATCH), ingredients are still required per API spec
         if self.instance is not None and "ingredients" not in attrs:
-            raise serializers.ValidationError({"ingredients": "Это поле обязательно."})
+            raise serializers.ValidationError(
+                {"ingredients": "Это поле обязательно."}
+            )
 
         return attrs
 

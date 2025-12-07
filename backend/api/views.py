@@ -78,7 +78,9 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     """ViewSet для рецептов с фильтрацией, пагинацией и управлением."""
 
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly
+    )
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     pagination_class = RecipePageNumberPagination
@@ -103,10 +105,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         recipe = serializer.save()
-        read_serializer = RecipeReadSerializer(recipe, context={"request": request})
+        read_serializer = RecipeReadSerializer(
+            recipe, context={"request": request}
+        )
         headers = self.get_success_headers(read_serializer.data)
         return Response(
-            read_serializer.data, status=status.HTTP_201_CREATED, headers=headers
+            read_serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
         )
 
     def update(self, request, *args, **kwargs):
@@ -119,10 +125,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 {"detail": "У вас нет прав для выполнения данного действия."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial
+        )
         serializer.is_valid(raise_exception=True)
         recipe = serializer.save()
-        read_serializer = RecipeReadSerializer(recipe, context={"request": request})
+        read_serializer = RecipeReadSerializer(
+            recipe, context={"request": request}
+        )
         return Response(read_serializer.data)
 
     def destroy(self, request, *args, **kwargs):
@@ -175,7 +185,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if request.method == "POST":
-            favorite, created = Favorite.objects.get_or_create(user=user, recipe=recipe)
+            fav, created = Favorite.objects.get_or_create(
+                user=user, recipe=recipe
+            )
             if not created:
                 return Response(
                     {"detail": "Рецепт уже в избранном"},
@@ -226,7 +238,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         elif request.method == "DELETE":
             try:
-                shopping_cart = ShoppingCart.objects.get(user=user, recipe=recipe)
+                shopping_cart = ShoppingCart.objects.get(
+                    user=user, recipe=recipe
+                )
             except ShoppingCart.DoesNotExist:
                 return Response(
                     {"detail": "Рецепт не найден в корзине"},
@@ -265,8 +279,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         txt_content = "\n".join(lines)
 
         # Возвращаем файл
-        response = HttpResponse(txt_content, content_type="text/plain; charset=utf-8")
-        response["Content-Disposition"] = 'attachment; filename="shopping_cart.txt"'
+        response = HttpResponse(
+            txt_content, content_type="text/plain; charset=utf-8"
+        )
+        response["Content-Disposition"] = (
+            'attachment; filename="shopping_cart.txt"'
+        )
         return response
 
 
@@ -286,7 +304,9 @@ class UserViewSet(DjoserUserViewSet):
     )
     def me(self, request):
         """Получить информацию о текущем пользователе."""
-        serializer = CustomUserSerializer(request.user, context={"request": request})
+        serializer = CustomUserSerializer(
+            request.user, context={"request": request}
+        )
         return Response(serializer.data)
 
     @action(
@@ -321,7 +341,9 @@ class UserViewSet(DjoserUserViewSet):
 
         elif request.method == "DELETE":
             try:
-                subscription = Subscription.objects.get(user=user, author=author)
+                subscription = Subscription.objects.get(
+                    user=user, author=author
+                )
             except Subscription.DoesNotExist:
                 return Response(
                     {"detail": "Вы не подписаны на этого пользователя"},
