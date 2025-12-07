@@ -19,8 +19,8 @@ class Tag(models.Model):
         validators=[
             RegexValidator(
                 r"^#[0-9a-fA-F]{6}$",
-                "Цвет должен быть в формате HEX (#ffffff)"
-            )
+                "Цвет должен быть в формате HEX (#ffffff)",
+            ),
         ],
     )
     slug = models.SlugField(unique=True)
@@ -35,30 +35,34 @@ class Recipe(models.Model):
     image = models.ImageField(upload_to="recipes/")
     text = models.TextField()
     cooking_time = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1)]
+        validators=[MinValueValidator(1)],
     )
     tags = models.ManyToManyField(Tag)
     ingredients = models.ManyToManyField(
-        Ingredient, through="RecipeIngredient"
+        Ingredient,
+        through="RecipeIngredient",
     )
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ["-pub_date"]
+
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     amount = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1)]
+        validators=[MinValueValidator(1)],
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["recipe", "ingredient"],
-                name="unique_recipe_ingredient"
+                name="unique_recipe_ingredient",
             )
         ]
 
@@ -70,7 +74,8 @@ class Favorite(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "recipe"], name="unique_user_recipe_favorite"
+                fields=["user", "recipe"],
+                name="unique_user_recipe_favorite",
             )
         ]
 
@@ -83,6 +88,6 @@ class ShoppingCart(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "recipe"],
-                name="unique_user_recipe_shopping_cart"
+                name="unique_user_recipe_shopping_cart",
             )
         ]

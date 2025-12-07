@@ -79,7 +79,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """ViewSet для рецептов с фильтрацией, пагинацией и управлением."""
 
     permission_classes = (
-        permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly
+        permissions.IsAuthenticatedOrReadOnly,
+        IsAuthorOrReadOnly,
     )
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
@@ -87,8 +88,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Оптимизирует запросы для рецептов."""
-        return Recipe.objects.select_related("author").prefetch_related(
-            "tags", "ingredients", "favorite_set", "shoppingcart_set"
+        return (
+            Recipe.objects.select_related("author")
+            .prefetch_related(
+                "tags",
+                "ingredients",
+                "favorite_set",
+                "shoppingcart_set",
+            )
+            .order_by("-pub_date")
         )
 
     def get_serializer_class(self):
@@ -106,13 +114,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         recipe = serializer.save()
         read_serializer = RecipeReadSerializer(
-            recipe, context={"request": request}
+            recipe,
+            context={"request": request},
         )
         headers = self.get_success_headers(read_serializer.data)
         return Response(
             read_serializer.data,
             status=status.HTTP_201_CREATED,
-            headers=headers
+            headers=headers,
         )
 
     def update(self, request, *args, **kwargs):
@@ -126,12 +135,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
         serializer = self.get_serializer(
-            instance, data=request.data, partial=partial
+            instance,
+            data=request.data,
+            partial=partial,
         )
         serializer.is_valid(raise_exception=True)
         recipe = serializer.save()
         read_serializer = RecipeReadSerializer(
-            recipe, context={"request": request}
+            recipe,
+            context={"request": request},
         )
         return Response(read_serializer.data)
 
@@ -186,7 +198,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         if request.method == "POST":
             fav, created = Favorite.objects.get_or_create(
-                user=user, recipe=recipe
+                user=user,
+                recipe=recipe,
             )
             if not created:
                 return Response(
@@ -239,7 +252,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         elif request.method == "DELETE":
             try:
                 shopping_cart = ShoppingCart.objects.get(
-                    user=user, recipe=recipe
+                    user=user,
+                    recipe=recipe,
                 )
             except ShoppingCart.DoesNotExist:
                 return Response(
@@ -280,7 +294,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         # Возвращаем файл
         response = HttpResponse(
-            txt_content, content_type="text/plain; charset=utf-8"
+            txt_content,
+            content_type="text/plain; charset=utf-8",
         )
         response["Content-Disposition"] = (
             'attachment; filename="shopping_cart.txt"'
@@ -305,7 +320,8 @@ class UserViewSet(DjoserUserViewSet):
     def me(self, request):
         """Получить информацию о текущем пользователе."""
         serializer = CustomUserSerializer(
-            request.user, context={"request": request}
+            request.user,
+            context={"request": request},
         )
         return Response(serializer.data)
 
@@ -342,7 +358,8 @@ class UserViewSet(DjoserUserViewSet):
         elif request.method == "DELETE":
             try:
                 subscription = Subscription.objects.get(
-                    user=user, author=author
+                    user=user,
+                    author=author,
                 )
             except Subscription.DoesNotExist:
                 return Response(
