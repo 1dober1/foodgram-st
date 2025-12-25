@@ -1,13 +1,20 @@
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 
+from recipes.constants import (
+    MAX_COLOR_LENGTH,
+    MAX_NAME_LENGTH,
+    MAX_UNIT_LENGTH,
+    MIN_AMOUNT,
+    MIN_COOKING_TIME,
+)
 from users.models import User
 
 
 class Ingredient(models.Model):
-    name = models.CharField(max_length=200, verbose_name="Название")
+    name = models.CharField(max_length=MAX_NAME_LENGTH, verbose_name="Название")
     measurement_unit = models.CharField(
-        max_length=200, verbose_name="Единица измерения"
+        max_length=MAX_UNIT_LENGTH, verbose_name="Единица измерения"
     )
 
     class Meta:
@@ -19,9 +26,9 @@ class Ingredient(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=200, verbose_name="Название")
+    name = models.CharField(max_length=MAX_NAME_LENGTH, verbose_name="Название")
     color = models.CharField(
-        max_length=7,
+        max_length=MAX_COLOR_LENGTH,
         verbose_name="Цвет",
         validators=[
             RegexValidator(
@@ -47,11 +54,11 @@ class Recipe(models.Model):
         related_name="recipes",
         verbose_name="Автор",
     )
-    name = models.CharField(max_length=200, verbose_name="Название")
+    name = models.CharField(max_length=MAX_NAME_LENGTH, verbose_name="Название")
     image = models.ImageField(upload_to="recipes/", verbose_name="Картинка")
     text = models.TextField(verbose_name="Описание")
     cooking_time = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1)],
+        validators=[MinValueValidator(MIN_COOKING_TIME)],
         verbose_name="Время приготовления",
     )
     tags = models.ManyToManyField(Tag, related_name="recipes", verbose_name="Теги")
@@ -65,13 +72,13 @@ class Recipe(models.Model):
         auto_now_add=True, verbose_name="Дата публикации"
     )
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         ordering = ["-pub_date"]
         verbose_name = "Рецепт"
         verbose_name_plural = "Рецепты"
+
+    def __str__(self):
+        return self.name
 
 
 class RecipeIngredient(models.Model):
@@ -88,7 +95,7 @@ class RecipeIngredient(models.Model):
         verbose_name="Ингредиент",
     )
     amount = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1)],
+        validators=[MinValueValidator(MIN_AMOUNT)],
         verbose_name="Количество",
     )
 
@@ -101,6 +108,9 @@ class RecipeIngredient(models.Model):
                 name="unique_recipe_ingredient",
             )
         ]
+
+    def __str__(self):
+        return f"{self.recipe}: {self.ingredient}"
 
 
 class Favorite(models.Model):
@@ -127,6 +137,9 @@ class Favorite(models.Model):
             )
         ]
 
+    def __str__(self):
+        return f"{self.user} -> {self.recipe}"
+
 
 class ShoppingCart(models.Model):
     user = models.ForeignKey(
@@ -151,3 +164,6 @@ class ShoppingCart(models.Model):
                 name="unique_user_recipe_shopping_cart",
             )
         ]
+
+    def __str__(self):
+        return f"{self.user} -> {self.recipe}"
