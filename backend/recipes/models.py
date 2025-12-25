@@ -44,6 +44,7 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        related_name="recipes",
         verbose_name="Автор",
     )
     name = models.CharField(max_length=200, verbose_name="Название")
@@ -53,10 +54,11 @@ class Recipe(models.Model):
         validators=[MinValueValidator(1)],
         verbose_name="Время приготовления",
     )
-    tags = models.ManyToManyField(Tag, verbose_name="Теги")
+    tags = models.ManyToManyField(Tag, related_name="recipes", verbose_name="Теги")
     ingredients = models.ManyToManyField(
         Ingredient,
         through="RecipeIngredient",
+        related_name="recipes",
         verbose_name="Ингредиенты",
     )
     pub_date = models.DateTimeField(
@@ -76,11 +78,13 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        related_name="recipe_ingredients",
         verbose_name="Рецепт",
     )
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
+        related_name="recipe_ingredients",
         verbose_name="Ингредиент",
     )
     amount = models.PositiveSmallIntegerField(
@@ -103,11 +107,13 @@ class Favorite(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        related_name="favorites",
         verbose_name="Пользователь",
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        related_name="favorites",
         verbose_name="Рецепт",
     )
 
@@ -126,11 +132,13 @@ class ShoppingCart(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        related_name="shopping_cart",
         verbose_name="Пользователь",
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        related_name="shopping_cart",
         verbose_name="Рецепт",
     )
 
