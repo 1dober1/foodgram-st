@@ -35,11 +35,9 @@ class IsAuthorOrReadOnly(permissions.BasePermission):
     """Разрешение: автор может редактировать, остальные только читают."""
 
     def has_object_permission(self, request, view, obj):
-        # Разрешаем GET, HEAD, OPTIONS запросы всем
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        # Разрешаем редактирование только автору
         return obj.author == request.user
 
 
@@ -270,7 +268,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def download_shopping_cart(self, request):
         """Скачать список покупок в виде текстового файла."""
-        # Получаем все ингредиенты из рецептов в корзине пользователя
         user = request.user
         ingredients = (
             RecipeIngredient.objects.filter(recipe__shoppingcart__user=user)
@@ -279,7 +276,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             .order_by("ingredient__name")
         )
 
-        # Формируем текстовый контент
         lines = ["Список покупок:", "=" * 40]
         if not ingredients:
             lines.append("Корзина пуста!")
@@ -292,7 +288,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         txt_content = "\n".join(lines)
 
-        # Возвращаем файл
+        txt_content = "\n".join(lines)
+
         response = HttpResponse(
             txt_content,
             content_type="text/plain; charset=utf-8",
@@ -408,7 +405,7 @@ class UserViewSet(DjoserUserViewSet):
             serializer.is_valid(raise_exception=True)
             user.avatar = serializer.validated_data["avatar"]
             user.save()
-            # Возвращаем только поле avatar согласно требованиям тестов
+            user.save()
             avatar_url = user.avatar.url if user.avatar else None
             if avatar_url and not avatar_url.startswith("http"):
                 avatar_url = request.build_absolute_uri(avatar_url)

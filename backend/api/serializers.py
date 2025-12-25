@@ -74,11 +74,9 @@ class CustomUserSerializer(UserSerializer):
         """
         request = self.context.get("request")
 
-        # Если пользователь не аутентифицирован, возвращаем False
         if not request or not request.user.is_authenticated:
             return False
 
-        # Проверяем наличие записи в модели Subscription
         return Subscription.objects.filter(
             user=request.user, author=obj
         ).exists()
@@ -209,7 +207,6 @@ class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
         """Декодирует строку base64 в файл Django."""
         if isinstance(data, str) and data.startswith("data:image"):
-            # Извлекаем base64 часть из data URL формата
             format, imgstr = data.split(";base64,")
             ext = format.split("/")[-1]
             data = ContentFile(b64decode(imgstr), name=f"image.{ext}")
@@ -284,19 +281,15 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создает новый рецепт с ингредиентами и тегами."""
-        # Извлекаем ingredients и tags из validated_data
         ingredients_data = validated_data.pop("ingredients")
         tags_data = validated_data.pop("tags", [])
 
-        # Создаем рецепт с текущим пользователем как автор
         validated_data["author"] = self.context["request"].user
         recipe = Recipe.objects.create(**validated_data)
 
-        # Устанавливаем теги (если есть)
         if tags_data:
             recipe.tags.set(tags_data)
 
-        # Создаем ингредиенты через bulk_create
         recipe_ingredients = []
         for ingredient_data in ingredients_data:
             ingredient = Ingredient.objects.get(id=ingredient_data["id"])
@@ -314,34 +307,17 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """Обновляет существующий рецепт."""
-        # Извлекаем ingredients и tags из validated_data
         ingredients_data = validated_data.pop("ingredients")
         tags_data = validated_data.pop("tags", None)
 
-        # Обновляем основные поля рецепта
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Если переданы теги, обновляем их
         if tags_data is not None:
             instance.tags.set(tags_data)
 
-        # Обновляем ингредиенты
-        # Удаляем старые связи ингредиентов
         RecipeIngredient.objects.filter(recipe=instance).delete()
-
-        # Создаем новые ингредиенты через bulk_create
-        recipe_ingredients = []
-        for ingredient_data in ingredients_data:
-            ingredient = Ingredient.objects.get(id=ingredient_data["id"])
-            recipe_ingredients.append(
-                RecipeIngredient(
-                    recipe=instance,
-                    ingredient=ingredient,
-                    amount=ingredient_data["amount"],
-                )
-            )
 
         RecipeIngredient.objects.bulk_create(recipe_ingredients)
 

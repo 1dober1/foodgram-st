@@ -36,7 +36,6 @@ class Command(BaseCommand):
             else:
                 self.load_from_json(file_path)
         else:
-            # Определяем путь к файлу
             base = Path(__file__).resolve().parent.parent.parent.parent.parent
 
             if file_format == "json":
@@ -56,7 +55,6 @@ class Command(BaseCommand):
             with open(file_path, "r", encoding="utf-8") as f:
                 ingredients_data = json.load(f)
 
-            # Создаем объекты Ingredient
             ingredients = [
                 Ingredient(
                     name=item["name"],
@@ -65,7 +63,6 @@ class Command(BaseCommand):
                 for item in ingredients_data
             ]
 
-            # Используем bulk_create для быстрой загрузки
             Ingredient.objects.bulk_create(ingredients, batch_size=1000)
 
             msg = f"✓ Загружено {len(ingredients)} ингредиентов из JSON"
@@ -84,17 +81,16 @@ class Command(BaseCommand):
             with open(file_path, "r", encoding="utf-8") as f:
                 reader = csv.reader(f)
 
-                # Создаем объекты Ingredient
                 ingredients = [
                     Ingredient(
                         name=row[0],
                         measurement_unit=row[1],
                     )
+                    )
                     for row in reader
-                    if len(row) >= 2  # Проверяем, что строка содержит оба поля
+                    if len(row) >= 2
                 ]
 
-            # Используем bulk_create для быстрой загрузки
             Ingredient.objects.bulk_create(ingredients, batch_size=1000)
 
             msg = f"✓ Загружено {len(ingredients)} ингредиентов из CSV"
