@@ -14,12 +14,14 @@ from recipes.models import (
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "slug", "color")
+    list_display_links = ("id", "name")
     search_fields = ("name", "slug")
 
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "measurement_unit")
+    list_display_links = ("id", "name")
     search_fields = ("name",)
 
 
@@ -31,6 +33,7 @@ class RecipeIngredientInline(admin.TabularInline):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "author", "favorites_count", "pub_date")
+    list_display_links = ("id", "name")
     list_filter = ("tags",)
     search_fields = (
         "name",
@@ -57,16 +60,19 @@ class RecipeAdmin(admin.ModelAdmin):
 @admin.register(RecipeIngredient)
 class RecipeIngredientAdmin(admin.ModelAdmin):
     list_display = ("id", "recipe", "ingredient", "amount")
+    list_display_links = ("id", "recipe")
     search_fields = ("recipe__name", "ingredient__name")
 
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "recipe")
+    list_display_links = ("id", "user")
     search_fields = ("user__email", "recipe__name")
 
 
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "recipe")
+    list_display_links = ("id", "user")
     search_fields = ("user__email", "recipe__name")
