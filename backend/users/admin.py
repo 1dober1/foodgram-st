@@ -1,10 +1,11 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 
 from users.models import Subscription, User
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(UserAdmin):
     list_display = ("id", "email", "username", "first_name", "last_name")
     search_fields = ("email", "username", "first_name", "last_name")
     list_filter = ("is_staff", "is_superuser")
