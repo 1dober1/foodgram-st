@@ -47,8 +47,6 @@ class CustomUserSerializer(UserSerializer):
     """Расширенный сериализатор пользователя с информацией о подписке."""
 
     is_subscribed = serializers.SerializerMethodField()
-    first_name = serializers.CharField(required=False, allow_blank=True)
-    last_name = serializers.CharField(required=False, allow_blank=True)
     avatar = serializers.ImageField(read_only=True, allow_null=True)
 
     class Meta(UserSerializer.Meta):
@@ -63,8 +61,7 @@ class CustomUserSerializer(UserSerializer):
         )
 
     def get_is_subscribed(self, obj):
-        """
-        Проверяет, подписан ли текущий пользователь на данного пользователя.
+        """Проверяет, подписан ли текущий пользователь на данного пользователя.
 
         Args:
             obj: Объект пользователя
@@ -86,12 +83,22 @@ class AuthorSubscriptionSerializer(CustomUserSerializer):
     """Сериализатор автора для списка подписок с рецептами."""
 
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta(CustomUserSerializer.Meta):
         fields = (
             CustomUserSerializer.Meta.fields + ("recipes_count", "recipes")
         )
+
+    def validate(self, data):
+        """Проверяет, что пользователь не подписывается на самого себя."""
+        author = self.instance
+        user = self.context.get("request").user
+        if user == author:
+            raise serializers.ValidationError(
+                "Вы не можете подписаться на самого себя"
+            )
+        return data
 
     def get_recipes(self, obj):
         """Возвращает рецепты автора, ограниченные параметром recipes_limit."""
@@ -103,12 +110,8 @@ class AuthorSubscriptionSerializer(CustomUserSerializer):
 
         recipes = Recipe.objects.filter(author=obj)
 
-        if recipes_limit:
-            try:
-                recipes_limit = int(recipes_limit)
-                recipes = recipes[:recipes_limit]
-            except (ValueError, TypeError):
-                pass
+        if recipes_limit and recipes_limit.isdigit():
+            recipes = recipes[: int(recipes_limit)]
 
         return RecipeShortForAuthorSerializer(recipes, many=True).data
 
@@ -155,8 +158,10 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientSerializer(
         source="recipeingredient_set", many=True
     )
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+    is_favorited = serializers.BooleanField(read_only=True, default=False)
+    is_in_shopping_cart = serializers.BooleanField(
+        read_only=True, default=False
+    )
 
     class Meta:
         model = Recipe
@@ -239,7 +244,12 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            "ingredients", "tags", "image", "name", "text", "cooking_time"
+            "ingredients",
+            "tags",
+            "image",
+            "name",
+            "text",
+            "cooking_time",
         )
 
     def validate_ingredients(self, value):
@@ -252,15 +262,16 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Ингредиенты не должны повторяться."
             )
-        for item in value:
-            if not Ingredient.objects.filter(id=item["id"]).exists():
-                raise serializers.ValidationError(
-                    "Указан несуществующий ингредиент."
-                )
+        valid_ids = Ingredient.objects.filter(id__in=ids).values_list(
+            "id", flat=True
+        )
+        if len(valid_ids) != len(ids):
+            raise serializers.ValidationError(
+                "Указан несуществующий ингредиент."
+            )
         return value
 
     def validate_tags(self, value):
-        # Tags are optional, so empty list is valid
         if value and len(value) != len(set(value)):
             raise serializers.ValidationError("Теги не должны повторяться.")
         return value
@@ -270,14 +281,18 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"cooking_time": "Значение должно быть >= 1"}
             )
-
-        # For updates (PATCH), ingredients are still required per API spec
-        if self.instance is not None and "ingredients" not in attrs:
-            raise serializers.ValidationError(
-                {"ingredients": "Это поле обязательно."}
-            )
-
         return attrs
+
+    def _save_ingredients(self, recipe, ingredients_data):
+        recipe_ingredients = [
+            RecipeIngredient(
+                recipe=recipe,
+                ingredient_id=ingredient_data["id"],
+                amount=ingredient_data["amount"],
+            )
+            for ingredient_data in ingredients_data
+        ]
+        RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
     def create(self, validated_data):
         """Создает новый рецепт с ингредиентами и тегами."""
@@ -290,35 +305,22 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         if tags_data:
             recipe.tags.set(tags_data)
 
-        recipe_ingredients = []
-        for ingredient_data in ingredients_data:
-            ingredient = Ingredient.objects.get(id=ingredient_data["id"])
-            recipe_ingredients.append(
-                RecipeIngredient(
-                    recipe=recipe,
-                    ingredient=ingredient,
-                    amount=ingredient_data["amount"],
-                )
-            )
-
-        RecipeIngredient.objects.bulk_create(recipe_ingredients)
+        self._save_ingredients(recipe, ingredients_data)
 
         return recipe
 
     def update(self, instance, validated_data):
         """Обновляет существующий рецепт."""
-        ingredients_data = validated_data.pop("ingredients")
+        ingredients_data = validated_data.pop("ingredients", None)
         tags_data = validated_data.pop("tags", None)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        instance = super().update(instance, validated_data)
 
         if tags_data is not None:
             instance.tags.set(tags_data)
 
-        RecipeIngredient.objects.filter(recipe=instance).delete()
-
-        RecipeIngredient.objects.bulk_create(recipe_ingredients)
+        if ingredients_data is not None:
+            instance.ingredients.clear()
+            self._save_ingredients(instance, ingredients_data)
 
         return instance
