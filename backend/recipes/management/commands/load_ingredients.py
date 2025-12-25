@@ -86,7 +86,6 @@ class Command(BaseCommand):
                         name=row[0],
                         measurement_unit=row[1],
                     )
-                    )
                     for row in reader
                     if len(row) >= 2
                 ]

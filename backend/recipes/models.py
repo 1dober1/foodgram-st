@@ -12,7 +12,9 @@ from users.models import User
 
 
 class Ingredient(models.Model):
-    name = models.CharField(max_length=MAX_NAME_LENGTH, verbose_name="Название")
+    name = models.CharField(
+        max_length=MAX_NAME_LENGTH, verbose_name="Название"
+    )
     measurement_unit = models.CharField(
         max_length=MAX_UNIT_LENGTH, verbose_name="Единица измерения"
     )
@@ -26,7 +28,9 @@ class Ingredient(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=MAX_NAME_LENGTH, verbose_name="Название")
+    name = models.CharField(
+        max_length=MAX_NAME_LENGTH, verbose_name="Название"
+    )
     color = models.CharField(
         max_length=MAX_COLOR_LENGTH,
         verbose_name="Цвет",
@@ -54,14 +58,18 @@ class Recipe(models.Model):
         related_name="recipes",
         verbose_name="Автор",
     )
-    name = models.CharField(max_length=MAX_NAME_LENGTH, verbose_name="Название")
+    name = models.CharField(
+        max_length=MAX_NAME_LENGTH, verbose_name="Название"
+    )
     image = models.ImageField(upload_to="recipes/", verbose_name="Картинка")
     text = models.TextField(verbose_name="Описание")
     cooking_time = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(MIN_COOKING_TIME)],
         verbose_name="Время приготовления",
     )
-    tags = models.ManyToManyField(Tag, related_name="recipes", verbose_name="Теги")
+    tags = models.ManyToManyField(
+        Tag, related_name="recipes", verbose_name="Теги"
+    )
     ingredients = models.ManyToManyField(
         Ingredient,
         through="RecipeIngredient",

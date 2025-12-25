@@ -68,7 +68,11 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
     search_fields = ("recipe__name", "ingredient__name")
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("recipe", "ingredient")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("recipe", "ingredient")
+        )
 
 
 @admin.register(Favorite)
