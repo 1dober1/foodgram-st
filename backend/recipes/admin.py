@@ -49,7 +49,11 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        return queryset.annotate(fav_count=Count("favorite"))
+        return (
+            queryset.select_related("author")
+            .prefetch_related("tags", "ingredients")
+            .annotate(fav_count=Count("favorite"))
+        )
 
     def favorites_count(self, obj):
         return getattr(obj, "fav_count", 0)
@@ -63,6 +67,9 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
     list_display_links = ("id", "recipe")
     search_fields = ("recipe__name", "ingredient__name")
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("recipe", "ingredient")
+
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
@@ -70,9 +77,15 @@ class FavoriteAdmin(admin.ModelAdmin):
     list_display_links = ("id", "user")
     search_fields = ("user__email", "recipe__name")
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user", "recipe")
+
 
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "recipe")
     list_display_links = ("id", "user")
     search_fields = ("user__email", "recipe__name")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user", "recipe")

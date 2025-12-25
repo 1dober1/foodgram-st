@@ -75,8 +75,8 @@ class Command(BaseCommand):
                 slug=tag["slug"],
                 defaults={"name": tag["name"], "color": tag["color"]},
             )
-            msg = "создан" if created else "уже существует"
-            self.stdout.write(f"  • Тег {obj.slug} {msg}")
+            message = "создан" if created else "уже существует"
+            self.stdout.write(f"  • Тег {obj.slug} {message}")
             tags[tag["slug"]] = obj
         return tags
 
@@ -97,8 +97,8 @@ class Command(BaseCommand):
                 name=item["name"],
                 defaults={"measurement_unit": item["measurement_unit"]},
             )
-            msg = "создан" if created else "уже существует"
-            self.stdout.write(f"  • Ингредиент {obj.name} {msg}")
+            message = "создан" if created else "уже существует"
+            self.stdout.write(f"  • Ингредиент {obj.name} {message}")
             ingredients[item["name"]] = obj
         return ingredients
 

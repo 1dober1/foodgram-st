@@ -19,3 +19,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "author")
     list_display_links = ("id", "user")
     search_fields = ("user__email", "author__email")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user", "author")

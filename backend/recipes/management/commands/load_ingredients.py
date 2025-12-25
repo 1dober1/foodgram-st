@@ -65,11 +65,11 @@ class Command(BaseCommand):
 
             Ingredient.objects.bulk_create(ingredients, batch_size=1000)
 
-            msg = f"✓ Загружено {len(ingredients)} ингредиентов из JSON"
-            self.stdout.write(self.style.SUCCESS(msg))
+            message = f"✓ Загружено {len(ingredients)} ингредиентов из JSON"
+            self.stdout.write(self.style.SUCCESS(message))
         except Exception as e:
-            msg = f"Ошибка при загрузке JSON: {str(e)}"
-            self.stdout.write(self.style.ERROR(msg))
+            message = f"Ошибка при загрузке JSON: {str(e)}"
+            self.stdout.write(self.style.ERROR(message))
 
     def load_from_csv(self, file_path):
         """Загружает ингредиенты из CSV файла"""
@@ -93,8 +93,8 @@ class Command(BaseCommand):
 
             Ingredient.objects.bulk_create(ingredients, batch_size=1000)
 
-            msg = f"✓ Загружено {len(ingredients)} ингредиентов из CSV"
-            self.stdout.write(self.style.SUCCESS(msg))
+            message = f"✓ Загружено {len(ingredients)} ингредиентов из CSV"
+            self.stdout.write(self.style.SUCCESS(message))
         except Exception as e:
-            msg = f"Ошибка при загрузке CSV: {str(e)}"
-            self.stdout.write(self.style.ERROR(msg))
+            message = f"Ошибка при загрузке CSV: {str(e)}"
+            self.stdout.write(self.style.ERROR(message))
